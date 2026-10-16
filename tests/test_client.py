@@ -130,6 +130,19 @@ def test_connection_error_sanitized():
     assert str(result.value) == "gateway_connection_failed"
 
 
+def test_diff_rejects_invalid_numbers_from_gateway():
+    base, head = "a" * 40, "b" * 40
+
+    def handler(request):
+        payload = (
+            '{"base":"' + base + '","head":"' + head + '","changes":[],"score":1e400}'
+        ).encode()
+        return httpx.Response(200, content=payload)
+
+    with mock_client(handler) as client, pytest.raises(GatewayError, match="invalid_json"):
+        client.diff(base, head)
+
+
 def test_cached_corruption_is_refetched(repo, tmp_path):
     _, commit, repository = repo
     cache = BlobCache(tmp_path / "cache")

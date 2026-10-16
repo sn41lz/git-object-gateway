@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 import re
 import unicodedata
 from dataclasses import asdict, dataclass
@@ -53,7 +54,13 @@ def verify_blob(data: bytes, expected: str, algorithm: str) -> bytes:
 
 
 def path(value: str) -> str:
-    if not isinstance(value, str) or not value or len(value.encode("utf-8")) > 1024:
+    if not isinstance(value, str) or not value:
+        raise GatewayError("invalid_path")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeError as exc:
+        raise GatewayError("invalid_path") from exc
+    if len(encoded) > 1024:
         raise GatewayError("invalid_path")
     parts = value.split("/")
     reserved = {
@@ -182,6 +189,12 @@ class Manifest:
 
 
 def strict_json(data: bytes) -> Any:
+    def finite_number(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("non-finite number")
+        return number
+
     def pairs(values: list[tuple[str, Any]]) -> dict[str, Any]:
         result = {}
         for key, value in values:
@@ -191,10 +204,24 @@ def strict_json(data: bytes) -> Any:
         return result
 
     try:
-        return json.loads(
+        value = json.loads(
             data,
             object_pairs_hook=pairs,
+            parse_float=finite_number,
             parse_constant=lambda _: (_ for _ in ()).throw(ValueError()),
         )
+        # json.loads accepts escaped, unpaired surrogates. Reject them at the wire boundary,
+        # including in object keys, before logging, canonicalization or filesystem access.
+        pending = [value]
+        while pending:
+            current = pending.pop()
+            if isinstance(current, str):
+                current.encode("utf-8")
+            elif isinstance(current, dict):
+                pending.extend(current.keys())
+                pending.extend(current.values())
+            elif isinstance(current, list):
+                pending.extend(current)
+        return value
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise GatewayError("invalid_json", 502) from exc
