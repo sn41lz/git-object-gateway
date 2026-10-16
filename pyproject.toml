@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools==84.0.0", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "git-object-gateway"
+version = "0.1.0"
+description = "Verified, sparse Git snapshots over HTTP for read-only agents and CI jobs."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = ["fastapi==0.143.2", "uvicorn==0.53.0", "httpx2==2.13.1", "opentelemetry-sdk==1.45.1"]
+
+[project.optional-dependencies]
+dev = ["build==1.6.1", "mypy==2.4.0", "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.17.0"]
+
+[project.scripts]
+git-object-gateway = "git_object_gateway.cli:main"
+
+[project.urls]
+Repository = "https://github.com/sn41lz/git-object-gateway"
+Issues = "https://github.com/sn41lz/git-object-gateway/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+git_object_gateway = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+
+[tool.coverage.run]
+source = ["git_object_gateway"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/git_object_gateway"]
+check_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true

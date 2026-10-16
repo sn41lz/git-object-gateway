@@ -1,0 +1,49 @@
+services:
+  runner:
+    build:
+      context: .
+      target: dev
+    user: "${RUNNER_UID:-1000}:${RUNNER_GID:-1000}"
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 2
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=512m,mode=1777
+    environment:
+      COVERAGE_FILE: /app/artifacts/.coverage
+    volumes:
+      - ./artifacts:/app/artifacts
+  gateway:
+    profiles: [serve]
+    build:
+      context: .
+      target: runtime
+    user: "${RUNNER_UID:-1000}:${RUNNER_GID:-1000}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 2
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=32m
+    environment:
+      GOG_TOKEN: "${GOG_TOKEN:-}"
+    volumes:
+      - type: bind
+        source: "${GOG_REPO:-.}"
+        target: /repository
+        read_only: true
+    ports:
+      - "127.0.0.1:8090:8090"
+    command: [python, -m, git_object_gateway, serve, --repo, /repository, --host, "0.0.0.0", --port, "8090"]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3

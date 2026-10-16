@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Git Object Gateway · benchmark</title><style>
+:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#eaf0fa;background:#0a1020}*{box-sizing:border-box}body{margin:0;padding:48px 24px}main{max-width:1100px;margin:auto}.eyebrow{color:#82e8ca;letter-spacing:.15em;text-transform:uppercase;font-size:12px;font-weight:700}h1{font-size:clamp(34px,6vw,60px);line-height:1.06;max-width:780px;letter-spacing:-.04em;margin:20px 0}p{color:#aebcd2;line-height:1.65;max-width:850px}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:32px 0}.card,section{background:#111b30;border:1px solid #24324b;border-radius:16px;padding:24px;min-width:0}.card strong{display:block;font-size:28px;color:#82e8ca;margin-bottom:8px}.card span{color:#aebcd2;font-size:13px}section{margin:20px 0}h2{font-size:19px;margin:0 0 20px}svg{width:100%;height:auto}.table{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}td,th{text-align:left;padding:14px 12px;border-bottom:1px solid #24324b}th{color:#dce7fc}thead th{font-size:11px;text-transform:uppercase;color:#9aacc7}code{overflow-wrap:anywhere;color:#cad6ed}details{margin-top:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;font-size:12px;color:#afc3df}footer{color:#879bb9;font-size:12px;margin-top:32px}@media(max-width:650px){body{padding:30px 16px}.cards{grid-template-columns:1fr}section{padding:18px}}</style>
+<main><div class="eyebrow">Open source · MIT · reproducible evidence</div><h1>Read the files.<br>Skip the checkout.</h1><p>A read-only Git gateway inspired by server-side source-control ideas. This report compares complete, verified application snapshots on a deterministic binary-heavy repository.</p>
+<div class="cards"><div class="card"><strong>a44e444a1d70</strong><span>One immutable commit across every strategy</span></div><div class="card"><strong>15</strong><span>Verified samples per strategy</span></div><div class="card"><strong>17</strong><span>Files selected under app/</span></div></div>
+<section><h2>End-to-end p95 latency · milliseconds</h2><svg viewBox="0 0 900 290" role="img" aria-label="Latency comparison"><text x="0" y="26" fill="#c3cfe1" font-size="13">git_shallow</text><rect x="220" y="11" width="590.00" height="23" rx="4" fill="#95a9f6"/><text x="820.00" y="27" fill="#f2f5fa" font-size="12">233.1</text><text x="0" y="80" fill="#c3cfe1" font-size="13">git_partial_sparse</text><rect x="220" y="65" width="210.00" height="23" rx="4" fill="#95a9f6"/><text x="440.00" y="81" fill="#f2f5fa" font-size="12">83.0</text><text x="0" y="134" fill="#c3cfe1" font-size="13">git_archive_local</text><rect x="220" y="119" width="35.91" height="23" rx="4" fill="#95a9f6"/><text x="265.91" y="135" fill="#f2f5fa" font-size="12">14.2</text><text x="0" y="188" fill="#c3cfe1" font-size="13">gateway_client_cold</text><rect x="220" y="173" width="332.77" height="23" rx="4" fill="#82e8ca"/><text x="562.77" y="189" fill="#f2f5fa" font-size="12">131.5</text><text x="0" y="242" fill="#c3cfe1" font-size="13">gateway_client_warm</text><rect x="220" y="227" width="80.68" height="23" rx="4" fill="#82e8ca"/><text x="310.68" y="243" fill="#f2f5fa" font-size="12">31.9</text></svg><p>Local loopback HTTP versus file:// Git transport. OS caches are warm; this is not an internet-throughput or enterprise-scale benchmark.</p></section>
+<section><h2>Correctness before speed</h2><div class="table"><table><thead><tr><th>Strategy</th><th>p50</th><th>p95</th><th>Job file bytes</th><th>HTTP body bytes</th><th>Verified</th></tr></thead><tbody><tr><th>git_shallow</th><td>222.0 ms</td><td>233.1 ms</td><td>16,871,190 B</td><td>not measured</td><td>15/15</td></tr><tr><th>git_partial_sparse</th><td>79.0 ms</td><td>83.0 ms</td><td>85,704 B</td><td>not measured</td><td>15/15</td></tr><tr><th>git_archive_local</th><td>13.0 ms</td><td>14.2 ms</td><td>36,242 B</td><td>not measured</td><td>15/15</td></tr><tr><th>gateway_client_cold</th><td>126.3 ms</td><td>131.5 ms</td><td>118,162 B</td><td>38153</td><td>15/15</td></tr><tr><th>gateway_client_warm</th><td>28.5 ms</td><td>31.9 ms</td><td>36,242 B</td><td>1911</td><td>15/15</td></tr></tbody></table></div><p>Job bytes include the complete output directory and any per-job cache. A warm client uses a shared cache whose cost is disclosed below. Git transport bytes are not measured; HTTP body bytes exclude headers and TLS.</p></section>
+<section><h2>What the numbers mean</h2><p>Both shallow and filtered sparse Git are real baselines. The archive baseline uses Git directly on the server filesystem and avoids transport entirely. The gateway is useful when callers need a language-neutral read API or reusable verified object cache. Git remains preferable for editing, history traversal and ordinary development.</p><details><summary>Environment, shared costs and methodology</summary><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;created_at&quot;: &quot;2026-10-16T06:50:03.248504+00:00&quot;,
+  &quot;commit&quot;: &quot;a44e444a1d7028ef52258ea5ed6aa8736ebfc0da&quot;,
+  &quot;runs&quot;: 15,
+  &quot;selected_files&quot;: 17,
+  &quot;selected_bytes&quot;: 36242,
+  &quot;shared_client_cache&quot;: {
+    &quot;payload_bytes&quot;: 36242,
+    &quot;objects&quot;: 17,
+    &quot;capacity_bytes&quot;: 268435456,
+    &quot;database_file_bytes&quot;: 81920
+  },
+  &quot;server_repository_file_bytes&quot;: 16869792,
+  &quot;server_cache&quot;: {
+    &quot;hits&quot;: 255,
+    &quot;misses&quot;: 17,
+    &quot;bytes&quot;: 36242,
+    &quot;objects&quot;: 17,
+    &quot;capacity_bytes&quot;: 67108864
+  },
+  &quot;environment&quot;: {
+    &quot;python&quot;: &quot;3.14.7&quot;,
+    &quot;platform&quot;: &quot;macOS-26.6-arm64-arm-64bit-Mach-O&quot;,
+    &quot;git&quot;: &quot;git version 2.54.0 (Apple Git-157)&quot;,
+    &quot;packages&quot;: {
+      &quot;fastapi&quot;: &quot;0.143.2&quot;,
+      &quot;uvicorn&quot;: &quot;0.53.0&quot;,
+      &quot;httpx2&quot;: &quot;2.13.1&quot;,
+      &quot;opentelemetry-sdk&quot;: &quot;1.45.1&quot;
+    }
+  },
+  &quot;methodology&quot;: {
+    &quot;transport&quot;: &quot;loopback HTTP; Git file:// --no-local; archive direct filesystem&quot;,
+    &quot;cache_state&quot;: &quot;warm OS caches; server cache and shared client cache explicitly primed; cold client cache new per job&quot;,
+    &quot;order&quot;: &quot;rotate strategies by repetition&quot;,
+    &quot;includes&quot;: &quot;setup, download, materialization, SHA-256 content and executable-bit verification&quot;,
+    &quot;excluded&quot;: &quot;server provisioning, priming, TLS, network latency, server CPU/RSS, filesystem allocated-block overhead&quot;,
+    &quot;limitations&quot;: &quot;synthetic binary-heavy fixture; no universal speedup, bandwidth or enterprise-scale claim&quot;
+  },
+  &quot;source_sha256&quot;: {
+    &quot;service.py&quot;: &quot;065a3d6f538a35596a49f33000f85194eeedba0f204ca5a583c773f43de91413&quot;,
+    &quot;benchmark.py&quot;: &quot;8a11b5fbbcb5017ce94d304353d51f52c0debf4adbacddd4ff308dab239fd2db&quot;,
+    &quot;protocol.py&quot;: &quot;4b3425123f4f7948dae3a0c74d7fe7ed1622dc377c89f7fb3bfa7508a0d820f1&quot;,
+    &quot;client.py&quot;: &quot;315e9be04a2ebb5560a93ba99cb8921a44314fec018538a35eee8b8909acdca3&quot;,
+    &quot;cache.py&quot;: &quot;11c7a804186c967c5c7dcf75ba8649f8b89d3fe6d00301d1b83dc7ff7fb7d8ba&quot;,
+    &quot;__init__.py&quot;: &quot;f5cf4e71faf57905fb281877fa9a1755355048b27617b5f9deb4be91c039ec5a&quot;,
+    &quot;telemetry.py&quot;: &quot;2b5847614096a55e7e727c1ccf16377f6e418294765f98d3f11b30da791c6f84&quot;,
+    &quot;cli.py&quot;: &quot;d8013bc93e3ca582a47d00b60f417274f34e040d0398bc014cb6cf2fa28198b7&quot;,
+    &quot;repository.py&quot;: &quot;a4cc753f7cc9c786bc7f10cbd60fc750d039a8fe5717a0f82f89f142d6838740&quot;,
+    &quot;__main__.py&quot;: &quot;935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d&quot;,
+    &quot;report.py&quot;: &quot;78390126060202af330501ebb9bc99a384f97c288cbc85e73566a4d8b2badfdc&quot;,
+    &quot;fixtures.py&quot;: &quot;3761e22d04d235326a34965bc0c6dc2c77e3b8b1e207952922d0ee261e379b13&quot;
+  }
+}</pre></details></section><footer>Independent project. No affiliation with Anthropic; no Scion protocol compatibility. Generated from measured local samples.</footer></main></html>

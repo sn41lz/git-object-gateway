@@ -1,0 +1,6 @@
+include LICENSE Makefile Dockerfile docker-compose.yml requirements*.lock
+recursive-include docs *.md *.json
+recursive-include benchmarks *.md *.json *.jsonl *.html
+recursive-include examples *.py
+recursive-include tests *.py
+recursive-include tools *.py
