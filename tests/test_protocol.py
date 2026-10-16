@@ -83,6 +83,33 @@ def test_strict_json(data):
         strict_json(data)
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        b'{"score":1e400}',
+        b'{"score":-1e400}',
+        b'{"value":"\\ud800"}',
+        b'{"\\udfff":"key"}',
+        b'{"nested":[{"value":"\\ud800"}]}',
+    ],
+)
+def test_json_rejects_exponent_overflow_and_unpaired_surrogates(data):
+    with pytest.raises(GatewayError, match="invalid_json"):
+        strict_json(data)
+
+
+def test_json_preserves_valid_unicode_pairs_and_finite_numbers():
+    assert strict_json(b'{"emoji":"\\ud83d\\ude00","score":1e100}') == {
+        "emoji": "😀",
+        "score": 1e100,
+    }
+
+
+def test_direct_path_validation_sanitizes_unpaired_surrogate():
+    with pytest.raises(GatewayError, match="invalid_path"):
+        path("app/\ud800.py")
+
+
 def payload():
     return Manifest("a" * 40, "sha1", ("app",), (Entry("app/a", "b" * 40, 1, "100644"),)).payload()
 
